@@ -61,7 +61,7 @@ func (a *Anomaly) fit(fit_value []float64) float64{
 	return values
 }
 
-func (anomaly *Anomaly) ShapiroWilk(series []float64) {
+func (anomaly *Anomaly) ShapiroWilk(series []float64) float64 {
 
 	N := float64(len(series))
 	n := int(N)
@@ -70,10 +70,10 @@ func (anomaly *Anomaly) ShapiroWilk(series []float64) {
 
 	sort.Float64s(Y)
 
-	m := make([]float64,N)
+	m := make([]float64,n)
 
 	for i := 0 ; i < int(N);i++{
-		num := float64((i+1) - 3.0/8.0)
+		num := float64(float64(i+1) - float64(3.0/8.0))
 		den := float64(N+1.0/4.0)
 		m[i] = InvCumulativeNormalDistribution(num/den)
 	}
@@ -106,7 +106,7 @@ func (anomaly *Anomaly) ShapiroWilk(series []float64) {
 		mnm1 :=m[n-2]
 		a[1] = -anm1
 		phi := (mm - 2 * mn * mn - 2 * mnm1 * mnm1) / (1.0 - 2 * an * an - 2 * anm1 * anm1)
-		sqrt := math.sqrt(phi)
+		sqrt := math.Sqrt(phi)
 		for i:= 2 ;i < n-2;i++ {
 			a[i] = m[i]/sqrt
 		}
@@ -122,7 +122,7 @@ func (anomaly *Anomaly) ShapiroWilk(series []float64) {
 	}
 
 	W := Wnum*Wnum / Wden
-	return W,
+	return W
 }
 
 func divide(s []float64,n float64) []float64{

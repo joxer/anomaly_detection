@@ -3,7 +3,7 @@ package anomaly
 import (
 	"testing"
 	"math/rand"
-	"github.com/joxer/golang-api/plotly"
+	"fmt"
 )
 func TestAnomaly(t *testing.T) {
 
@@ -29,16 +29,6 @@ func TestAnomaly(t *testing.T) {
 		y = append(y,i)
 	}
 
-	f := plotly.Figure{
-		Data: []plotly.Trace{
-			plotly.Trace{
-				Type: "bar",
-				X: x,
-				Y: y,
-			},
-		},
-	}
 
-
-	f.Save("new golang file")
+	//f.Save("new golang file")
 }
