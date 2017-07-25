@@ -1,11 +1,268 @@
 package anomaly
+/*
+#include <gsl/gsl_randist.h>
+#include <gsl/gsl_cdf.h>
+#include <gsl/gsl_sort.h>
+#include <math.h>
+#include <stdio.h>
 
+#ifndef min
+# define min(a, b)      ((a) > (b) ? (b) : (a))
+#endif
+
+#ifndef sign
+# define sign(a)        ((a) >= 0 ? 1.0 : -1.0)
+#endif
+
+
+double poly(const double *cc, int nord, double x)
+{
+
+int j;
+double p, ret_val;
+
+ret_val = cc[0];
+if (nord > 1) {
+p = x * cc[nord-1];
+for (j = nord - 2; j > 0; j--)
+p = (p + cc[j]) * x;
+
+ret_val += p;
+}
+return ret_val;
+}
+
+void swilk(int *init,
+double *x, int *n, int *n1, int *n2,
+double *a,
+double *w, double *pw, int *ifault)
+{
+
+const static double zero = 0.f;
+const static double one = 1.f;
+const static double two = 2.f;
+
+const static double small = 1e-19f;
+
+const static double g[2] = { -2.273f,.459f };
+const static double
+c1[6] = { 0.f,.221157f,-.147981f,-2.07119f, 4.434685f, -2.706056f },
+c2[6] = { 0.f,.042981f,-.293762f,-1.752461f,5.682633f, -3.582633f };
+const static double c3[4] = { .544f,-.39978f,.025054f,-6.714e-4f };
+const static double c4[4] = { 1.3822f,-.77857f,.062767f,-.0020322f };
+const static double c5[4] = { -1.5861f,-.31082f,-.083751f,.0038915f };
+const static double c6[3] = { -.4803f,-.082676f,.0030302f };
+const static double c7[2] = { .164f,.533f };
+const static double c8[2] = { .1736f,.315f };
+const static double c9[2] = { .256f,-.00635f };
+
+double r__1;
+
+int i, j, ncens, i1, nn2;
+
+double zbar, ssassx, summ2, ssumm2, gamma, delta, range;
+double a1, a2, an, bf, ld, m, s, sa, xi, sx, xx, y, w1;
+double fac, asa, an25, ssa, z90f, sax, zfm, z95f, zsd, z99f, rsn, ssx, xsx;
+
+*pw = 1.;
+if (*w >= 0.) {
+*w = 1.;
+}
+if (*n < 3) {   *ifault = 1; return;
+}
+
+an = (double) (*n);
+nn2 = *n / 2;
+if (*n2 < nn2) {    *ifault = 3; return;
+}
+if (*n1 < 3) {  *ifault = 1; return;
+}
+ncens = *n - *n1;
+if (ncens < 0 || (ncens > 0 && *n < 20)) {  *ifault = 4; return;
+}
+if (ncens > 0) {
+delta = (double) ncens / an;
+if (delta > .8f) {  *ifault = 5; return;
+}
+} else { delta = 0.f; }
+
+--a;
+if (! (*init)) {
+if (*n == 3) {
+const static double sqrth = .70710678f;
+a[1] = sqrth;
+} else {
+an25 = an + .25;
+summ2 = zero;
+for (i = 1; i <= *n2; ++i) {
+a[i] = gsl_cdf_ugaussian_Pinv ((i - .375f) / an25);
+r__1 = a[i];
+summ2 += r__1 * r__1;
+}
+summ2 *= two;
+ssumm2 = sqrt(summ2);
+rsn = one / sqrt(an);
+a1 = poly(c1, 6, rsn) - a[1] / ssumm2;
+
+if (*n > 5) {
+i1 = 3;
+a2 = -a[2] / ssumm2 + poly(c2, 6, rsn);
+fac = sqrt((summ2 - two * (a[1] * a[1]) - two * (a[2] * a[2]))
+/ (one - two * (a1 * a1) - two * (a2 * a2)));
+a[2] = a2;
+} else {
+i1 = 2;
+fac = sqrt((summ2 - two * (a[1] * a[1])) /
+( one  - two * (a1 * a1)));
+}
+a[1] = a1;
+for (i = i1; i <= nn2; ++i)
+a[i] /= - fac;
+}
+*init = (1);
+}
+
+if (*w < zero) {
+w1 = 1. + *w;
+*ifault = 0;
+goto L70;
+}
+
+range = x[*n1 - 1] - x[0];
+if (range < small) {
+*ifault = 6;    return;
+}
+
+*ifault = 0;
+xx = x[0] / range;
+sx = xx;
+sa = -a[1];
+j = *n - 1;
+for (i = 1; i < *n1; --j) {
+xi = x[i] / range;
+if (xx - xi > small) {
+*ifault = 7;
+}
+sx += xi;
+++i;
+if (i != j)
+sa += sign(i - j) * a[min(i,j)];
+xx = xi;
+}
+if (*n > 5000) {
+*ifault = 2;
+}
+
+
+sa /= *n1;
+sx /= *n1;
+ssa = ssx = sax = zero;
+j = *n - 1;
+for (i = 0; i < *n1; ++i, --j) {
+if (i != j)
+asa = sign(i - j) * a[1+min(i,j)] - sa;
+else
+asa = -sa;
+xsx = x[i] / range - sx;
+ssa += asa * asa;
+ssx += xsx * xsx;
+sax += asa * xsx;
+}
+
+ssassx = sqrt(ssa * ssx);
+w1 = (ssassx - sax) * (ssassx + sax) / (ssa * ssx);
+L70:
+*w = 1. - w1;
+
+if (*n == 3) {
+const static double pi6 = 1.90985931710274;
+const static double stqr= 1.04719755119660;
+*pw = pi6 * (asin(sqrt(*w)) - stqr);
+if(*pw < 0.) *pw = 0.;
+return;
+}
+y = log(w1);
+xx = log(an);
+if (*n <= 11) {
+gamma = poly(g, 2, an);
+if (y >= gamma) {
+*pw = 1e-99;
+return;
+}
+y = -log(gamma - y);
+m = poly(c3, 4, an);
+s = exp(poly(c4, 4, an));
+} else {
+m = poly(c5, 4, xx);
+s = exp(poly(c6, 3, xx));
+}
+
+if (ncens > 0) {
+const static double three = 3.f;
+
+const static double z90 = 1.2816f;
+const static double z95 = 1.6449f;
+const static double z99 = 2.3263f;
+const static double zm = 1.7509f;
+const static double zss = .56268f;
+const static double bf1 = .8378f;
+
+const static double xx90 = .556;
+const static double xx95 = .622;
+
+ld = -log(delta);
+bf = one + xx * bf1;
+r__1 = pow(xx90, (double) xx);
+z90f = z90 + bf * pow(poly(c7, 2, r__1), (double) ld);
+r__1 = pow(xx95, (double) xx);
+z95f = z95 + bf * pow(poly(c8, 2, r__1), (double) ld);
+z99f = z99 + bf * pow(poly(c9, 2, xx), (double)ld);
+
+
+zfm = (z90f + z95f + z99f) / three;
+zsd = (z90 * (z90f - zfm) +
+z95 * (z95f - zfm) + z99 * (z99f - zfm)) / zss;
+zbar = zfm - zsd * zm;
+m += zbar * s;
+s *= zsd;
+}
+
+*pw = gsl_cdf_gaussian_Q(y - m, s);
+
+
+return;
+}
+
+
+shapiro_wilk(double d_data[], int d_n,double arg[]){
+int init = 0;
+int n = d_n;
+int n1 = d_n;
+int n2 = d_n/2;
+int error = 0;
+double d_w = 0.0;
+double d_pValue = 0.0;
+double a[n2];
+
+
+swilk(&init, d_data, &n, &n1, &n2, a, &d_w, &d_pValue, &error);
+arg[0] = d_w;
+arg[1] = d_pValue;
+arg[2] = error;
+}
+ */
+// #cgo LDFLAGS: -lgsl  -lgslcblas -lm
+import "C"
 import (
-  "github.com/montanaflynn/stats"
-	"fmt"
+	"github.com/montanaflynn/stats"
 	"math"
+	"unsafe"
+
+	"fmt"
 	"sort"
 )
+
+
 
 type Anomaly struct {
 	series            map[string][]float64
@@ -47,7 +304,8 @@ func (a *Anomaly) train(){
 		std,_ := stats.StandardDeviation(a.series[idx])
 		a.internal_mean_std[i] = []float64{mean, std}
 	}
-	fmt.Print(a.internal_mean_std)
+
+
 }
 
 func (a *Anomaly) fit(fit_value []float64) float64{
@@ -61,122 +319,18 @@ func (a *Anomaly) fit(fit_value []float64) float64{
 	return values
 }
 
-func (anomaly *Anomaly) ShapiroWilk(series []float64) float64 {
-
-	N := float64(len(series))
-	n := int(N)
-	mean,_ := stats.Mean(series)
-	Y := series
-
-	sort.Float64s(Y)
-
-	m := make([]float64,n)
-
-	for i := 0 ; i < int(N);i++{
-		num := float64(float64(i+1) - float64(3.0/8.0))
-		den := float64(N+1.0/4.0)
-		m[i] = InvCumulativeNormalDistribution(num/den)
+func (anomaly *Anomaly) ShapiroWilk(series []float64)  {
+	sort.Float64s(series)
+	var tmp = make([]C.double,len(series))
+	for i := 0 ; i < len(series);i++{
+		tmp[i] = C.double(series[i])
 	}
-	mm := dot(m,m)
-	c := divide(m, math.Sqrt(N))
-	u := 1.0/math.Sqrt(N)
+	tmp2 := make([]C.double,3)
+	ptr := unsafe.Pointer(&tmp[0])
+	ptr2 := unsafe.Pointer(&tmp2[0])
+	C.shapiro_wilk((*C.double)(ptr),C.int(len(series)),(*C.double)(ptr2))
 
-	u2 := u*u
-	u3 := u2*u
-	u4 := u2*u2
-	u5 := u4*u
-	a := make([]float64,int(N))
-
-	a[n-1] = -2.706056 * u5 + 4.434685 * u4 - 2.071190 * u3 - 0.147981 * u2 + 0.221157 * u + c[n - 1]
-	an := a[n-1]
-	mn := m[n-1]
-	a[0] = -an
-
-	if (n <= 5) {
-
-		phi := (mm - 2*mn*mn) / (1.0 - 2*an*an)
-		sqrt := math.Sqrt(phi)
-
-		for i := 1; i < n-1; i++ {
-			a[i] = m[i] / sqrt
-		}
-	}else{
-		a[n - 2] = -3.582633 * u5 + 5.682633 * u4 - 1.752461 * u3 - 0.293762 * u2 + 0.042981 * u + c[n - 2];
-		anm1 :=a[n-2]
-		mnm1 :=m[n-2]
-		a[1] = -anm1
-		phi := (mm - 2 * mn * mn - 2 * mnm1 * mnm1) / (1.0 - 2 * an * an - 2 * anm1 * anm1)
-		sqrt := math.Sqrt(phi)
-		for i:= 2 ;i < n-2;i++ {
-			a[i] = m[i]/sqrt
-		}
-	}
-
-	Wnum := 0.0
-	Wden := 0.0
-
-	for i:=0; i < len(series);i++ {
-		w := (Y[i] -mean)
-		Wnum += a[i] * Y[i]
-		Wden += w*w
-	}
-
-	W := Wnum*Wnum / Wden
-	return W
-}
-
-func divide(s []float64,n float64) []float64{
-	for i:=0; i < len(s);i++{
-		s[i] /= n
-	}
-	return s
-}
-
-func InvCumulativeNormalDistribution(p float64) float64 {
-	if p <= 0 || p >= 1 {
-		panic("Argument to ltqnorm %f must be in open interval (0,1)")
-	}
-
-	//Coefficients in rational approximations.
-	a := []float64{-3.969683028665376e+01, 2.209460984245205e+02,
-				   -2.759285104469687e+02, 1.383577518672690e+02,
-				   -3.066479806614716e+01, 2.506628277459239e+00}
-	b := []float64{-5.447609879822406e+01, 1.615858368580409e+02,
-				   -1.556989798598866e+02, 6.680131188771972e+01,
-				   -1.328068155288572e+01}
-	c := []float64{-7.784894002430293e-03, -3.223964580411365e-01,
-				   -2.400758277161838e+00, -2.549732539343734e+00,
-				   4.374664141464968e+00, 2.938163982698783e+00}
-	d := []float64{7.784695709041462e-03, 3.224671290700398e-01,
-				   2.445134137142996e+00, 3.754408661907416e+00}
-
-	// Define break-points.
-	plow := 0.02425
-	phigh := 1 - plow
-
-	// Rational approximation for lower region:
-	if p < plow {
-		q := math.Sqrt(-2 * math.Log(p))
-		return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q + c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q + 1)
-	}
-
-	// Rational approximation for upper region:
-	if phigh < p {
-		q := math.Sqrt(-2 * math.Log(1-p))
-		return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q + c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q + 1)
-	}
-
-	//Rational approximation for central region:
-	q := p - 0.5
-	r := q * q
-	return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r + a[5]) * q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r + 1)
-}
+	fmt.Print(tmp2)
 
 
-func dot(s1 []float64, s2[]float64) float64{
-	var tot float64;
-	for i:=0; i < len(s1);i++ {
-		tot += s1[i]*s2[i]
-	}
-	return tot
 }

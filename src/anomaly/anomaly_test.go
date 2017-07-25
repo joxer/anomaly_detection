@@ -3,32 +3,24 @@ package anomaly
 import (
 	"testing"
 	"math/rand"
-	"fmt"
 )
 func TestAnomaly(t *testing.T) {
 
-	series := make(map[string][]float64)
+	series :=  make(map[string][]float64)
 	rand.Seed(100)
-	series["a"] = make([]float64,200)
-
-
-	for i := 0; i < 200; i++ {
-		series["a"][i] = rand.NormFloat64()+5
-
+	series["a"] = []float64{rand.NormFloat64()*2+3,
+		rand.NormFloat64()*2+3,
+		rand.NormFloat64()*2+3,
+		rand.NormFloat64()*2+3,rand.NormFloat64()*2+3,
 	}
+
+
+
 
 	features := []string{"a"}
 
 	n := New().setSeries(series).setFeatures(features).build()
 	n.train()
-
-	x := make([]interface{}, 0)
-	y := make([]interface{},0)
-	for i := 0; i < 200; i++ {
-		x = append(x, ([]float64{series["a"][i]}))
-		y = append(y,i)
-	}
-
-
+	n.ShapiroWilk(series["a"])
 	//f.Save("new golang file")
 }
